@@ -12,6 +12,7 @@ import {
   TwoColumnSidebar
 } from 'components/two-column'
 import Image from 'next/image'
+import { getPlaiceholder } from 'plaiceholder'
 import { eyecatchLocal } from 'lib/constants'
 
 const Schedule = ({
@@ -43,6 +44,8 @@ const Schedule = ({
             height={eyecatch.height}
             sizes='(min-width: 1152px) 1152px, 100vw'
             priority
+            placeholder='blur'
+            blurDataURL={eyecatch.blurDataURL}
           />
         </figure>
 
@@ -66,6 +69,9 @@ const getStaticProps = async () => {
   const post = await getPostBySlug(slug)
   const description = extractText(post.content)
   const eyecatch = post.eyecatch ?? eyecatchLocal
+  const { base64 } = await getPlaiceholder(eyecatch.url)
+  eyecatch.blurDataURL = base64
+
   return {
     props: {
       title: post.title,
