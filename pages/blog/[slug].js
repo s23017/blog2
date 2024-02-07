@@ -1,5 +1,6 @@
 import { getPostBySlug, getAllSlugs } from 'lib/api'
 import extractText from 'lib/extract-text'
+import { prevNextPost } from 'lib/prev-next-post'
 import Meta from 'components/meta'
 import Container from 'components/container'
 import PostHeader from 'components/post-header'
@@ -11,17 +12,21 @@ import {
   TwoColumnMain,
   TwoColumnSidebar
 } from 'components/two-column'
+import Pagination from 'components/pagination'
 import Image from 'next/image'
 import { getPlaiceholder } from 'plaiceholder'
-import { eyecatchLocal } from 'lib/constants'
 
+// ローカルの代替アイキャッチ画像
+import { eyecatchLocal } from 'lib/constants'
 const Post = ({
   title,
   publish,
   content,
   eyecatch,
   categories,
-  description
+  description,
+  prevPost,
+  nextPost
 }) => {
   return (
     <Container>
@@ -34,7 +39,6 @@ const Post = ({
       />
       <article>
         <PostHeader title={title} subtitle='Blog Article' publish={publish} />
-
         <figure>
           <Image
             src={eyecatch.url}
@@ -48,7 +52,6 @@ const Post = ({
             blurDataURL={eyecatch.blurDataURL}
           />
         </figure>
-
         <TwoColumn>
           <TwoColumnMain>
             <PostBody>
@@ -59,26 +62,38 @@ const Post = ({
             <PostCategories categories={categories} />
           </TwoColumnSidebar>
         </TwoColumn>
+        <Pagination
+          prevText={prevPost.title}
+          prevUrl={`/blog/${prevPost.slug}`}
+          nextText={nextPost.title}
+          nextUrl={`/blog/${nextPost.slug}`}
+        />
       </article>
     </Container>
   )
 }
-
 const getStaticPaths = async () => {
-  const allSlugs = await getAllSlugs()
+  const allslugs = await getAllSlugs()
   return {
-    paths: allSlugs.map(({ slug }) => `/blog/${slug}`),
+    paths: allslugs.map(({ slug }) => `/blog/${slug}`),
     fallback: false
   }
 }
-
-const getStaticProps = async context => {
-  const slug = context.params.slug
+const getStaticProps = async ({ params }) => {
+  const { slug } = params
   const post = await getPostBySlug(slug)
+  if (!post) {
+    return {
+      notFound: true
+    }
+  }
   const description = extractText(post.content)
   const eyecatch = post.eyecatch ?? eyecatchLocal
   const { base64 } = await getPlaiceholder(eyecatch.url)
   eyecatch.blurDataURL = base64
+
+  const allSlugs = await getAllSlugs()
+  const [prevPost, nextPost] = prevNextPost(allSlugs, slug)
 
   return {
     props: {
@@ -87,7 +102,9 @@ const getStaticProps = async context => {
       content: post.content,
       eyecatch: eyecatch,
       categories: post.categories,
-      description: description
+      description: description,
+      prevPost: prevPost,
+      nextPost: nextPost
     }
   }
 }
